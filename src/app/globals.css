@@ -1,0 +1,123 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Polices 100 % locales (aucune requête externe → console propre + hors-ligne) */
+  --font-display: "Georgia", "Iowan Old Style", "Palatino Linotype", "Times New Roman", serif;
+  --font-inter: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  /* Thème clair par défaut (le sélecteur bascule via [data-theme]) */
+  --bg: #e9e2cf;
+  --bg-felt: radial-gradient(circle at 50% 0%, #1b5140 0%, #0f3428 55%, #0a2019 100%);
+  --panel: #ffffff;
+  --panel-soft: #f4eede;
+  --text: #1b2a24;
+  --text-soft: #4c5a52;
+  --border: #d8cfba;
+}
+
+:root[data-theme="dark"] {
+  --bg: #0a2019;
+  --bg-felt: radial-gradient(circle at 50% 0%, #14402f 0%, #0d2c22 55%, #071912 100%);
+  --panel: #10362a;
+  --panel-soft: #0c2a20;
+  --text: #f6f1e3;
+  --text-soft: #b7c7bd;
+  --border: #1e5240;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+}
+
+html {
+  background: var(--bg-felt) fixed;
+}
+
+body {
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font-inter);
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: none;
+}
+
+h1,
+h2,
+h3,
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+}
+
+/* Surfaces réutilisables */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.panel-soft {
+  background: var(--panel-soft);
+  border: 1px solid var(--border);
+}
+
+/* Feutrine texturée subtile */
+.felt-texture {
+  background-image:
+    radial-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    radial-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+  background-size: 22px 22px, 22px 22px;
+  background-position: 0 0, 11px 11px;
+}
+
+/* Cibles tactiles confortables */
+.tap {
+  min-height: 48px;
+  min-width: 48px;
+}
+
+/* Odomètre / tabulation numérique */
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* Effet doré (moments de gloire) */
+.gold-shimmer {
+  background: linear-gradient(90deg, #b8912a, #f4d670, #b8912a);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer 2.5s linear infinite;
+}
+
+.safe-bottom {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+/* Respect de reduced-motion : on coupe toute animation non essentielle */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Barre de progression */
+.progress-track {
+  background: color-mix(in srgb, var(--text-soft) 22%, transparent);
+}
