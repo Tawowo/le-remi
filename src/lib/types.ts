@@ -40,4 +40,7 @@ export type Theme = "dark" | "light";
 export interface Settings {
   theme: Theme;
   sound: boolean;
+  vibration: boolean;
+  /** Vitesse/quantité d'animations. */
+  animations: "full" | "reduced";
 }

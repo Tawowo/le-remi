@@ -3,107 +3,96 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Logo } from "@/components/Logo";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { getCurrentGame, loadGames } from "@/lib/storage";
+import { TopBar } from "@/components/economy/TopBar";
+import { Onboarding } from "@/components/economy/Onboarding";
+import { useProfile } from "@/components/economy/ProfileProvider";
+import { getCurrentGame } from "@/lib/storage";
 import { loadCurrentPlay } from "@/lib/playStore";
-import type { Game } from "@/lib/types";
-
-interface Resume {
-  href: string;
-  label: string;
-  detail: string;
-}
+import { computeDailyBonus } from "@/lib/economy/progression";
+import { WHEEL_COOLDOWN_MS } from "@/lib/economy/config";
 
 export default function HomePage() {
-  const [resumes, setResumes] = useState<Resume[]>([]);
-  const [ready, setReady] = useState(false);
+  const { profile, ready } = useProfile();
+  const [resume, setResume] = useState<{ href: string; label: string } | null>(null);
+  const [rewardDot, setRewardDot] = useState(false);
 
   useEffect(() => {
-    const list: Resume[] = [];
     const play = loadCurrentPlay();
     if (play && play.state.phase !== "gameEnd") {
-      list.push({
-        href: "/table",
-        label: "Reprendre la partie contre l'ordinateur",
-        detail: `${play.state.players.length} joueurs · manche ${play.state.roundNumber}`,
-      });
+      setResume({ href: "/table", label: "Reprendre la partie en cours" });
+    } else {
+      const table = getCurrentGame();
+      if (table && !table.finishedAt) setResume({ href: "/partie", label: "Reprendre le compteur de table" });
     }
-    const table: Game | null = getCurrentGame();
-    if (table && !table.finishedAt) {
-      list.push({
-        href: "/partie",
-        label: "Reprendre la partie sur table",
-        detail: `${table.players.length} joueurs · manche ${table.rounds.length + 1}`,
-      });
-    }
-    setResumes(list);
-    void loadGames();
-    setReady(true);
   }, []);
+
+  useEffect(() => {
+    if (!ready) return;
+    const now = Date.now();
+    const daily = computeDailyBonus(profile.lastDailyDay, profile.dailyStreak, now).canClaim;
+    const wheel = now - profile.lastWheelMs >= WHEEL_COOLDOWN_MS;
+    setRewardDot(daily || wheel);
+  }, [ready, profile.lastDailyDay, profile.dailyStreak, profile.lastWheelMs]);
+
+  if (!ready) return null;
+  if (!profile.onboarded) return <Onboarding onDone={() => {}} />;
 
   return (
     <main className="mx-auto flex min-h-app max-w-md flex-col px-5 safe-top safe-bottom pt-2">
-      <div className="flex justify-end">
-        <ThemeToggle />
+      <TopBar />
+
+      <div className="mt-3">
+        <Logo size={64} />
       </div>
 
-      <div className="mt-4">
-        <Logo />
-      </div>
-
-      {ready && resumes.length > 0 && (
-        <div className="mt-8 flex flex-col gap-2">
-          {resumes.map((r) => (
-            <Link
-              key={r.href}
-              href={r.href}
-              className="tap flex items-center justify-between rounded-2xl border border-gold/60 panel px-5 py-3.5 active:scale-[0.98] transition-transform"
-            >
-              <span className="font-semibold">{r.label}</span>
-              <span className="text-xs text-[color:var(--text-soft)]">{r.detail}</span>
-            </Link>
-          ))}
-        </div>
+      {resume && (
+        <Link
+          href={resume.href}
+          className="mt-6 tap flex items-center justify-center rounded-2xl border border-gold/60 panel px-5 py-3 font-semibold active:scale-[0.98] transition-transform"
+        >
+          {resume.label}
+        </Link>
       )}
 
-      <nav className="mt-8 flex flex-col gap-3">
-        <Tile href="/jouer" primary icon="🤖" title="Jouer contre l'ordinateur" sub="1 à 5 bots, profils réglables" />
-        <Tile href="/en-ligne" icon="🌐" title="Jouer en ligne" sub="Créer ou rejoindre par code" />
-        <Tile href="/nouvelle-partie" icon="🃏" title="Partie sur table" sub="Compteur de score autour d'une table" />
-        <div className="grid grid-cols-2 gap-3">
-          <Tile href="/stats" icon="📊" title="Statistiques" sub="Par pseudo" compact />
-          <Tile href="/regles" icon="📖" title="Les règles" sub="Apprendre" compact />
-        </div>
+      <nav className="mt-6 flex flex-col gap-3">
+        <Door href="/en-ligne" icon="🌐" title="Jouer en ligne" sub="Créer / rejoindre · Les Tables" />
+        <Door href="/jouer" icon="🤖" title="Jouer hors ligne" sub="Contre les bots · Les Tables" primary />
+        <Door href="/nouvelle-partie" icon="🃏" title="Compteur de table" sub="Score avec de vraies cartes" />
       </nav>
 
-      <p className="mt-auto pt-8 text-center text-xs text-[color:var(--text-soft)]">
-        100 % hors-ligne (sauf le mode en ligne) · aucune inscription
+      <div className="mt-5 grid grid-cols-5 gap-2">
+        <Mini href="/profil" icon="👤" label="Profil" />
+        <Mini href="/boutique" icon="🛍️" label="Boutique" />
+        <Mini href="/recompenses" icon="🎁" label="Cadeaux" dot={rewardDot} />
+        <Mini href="/regles" icon="📖" label="Règles" />
+        <Mini href="/reglages" icon="⚙️" label="Réglages" />
+      </div>
+
+      <p className="mt-auto pt-6 text-center text-xs text-[color:var(--text-soft)]">
+        Pièces 100 % virtuelles · aucun achat réel · c'est un jeu
       </p>
     </main>
   );
 }
 
-function Tile({
+function Door({
   href,
   title,
   sub,
   icon,
   primary = false,
-  compact = false,
 }: {
   href: string;
   title: string;
   sub: string;
   icon: string;
   primary?: boolean;
-  compact?: boolean;
 }) {
   return (
     <Link
       href={href}
       className={[
-        "tap flex items-center gap-3 rounded-2xl px-5 active:scale-[0.98] transition-transform",
-        compact ? "flex-col items-start py-3" : "py-4",
+        "tap flex items-center gap-3 rounded-2xl px-5 py-4 active:scale-[0.98] transition-transform",
         primary ? "bg-gold text-felt-deep shadow-glow" : "panel",
       ].join(" ")}
     >
@@ -112,6 +101,16 @@ function Tile({
         <span className="block font-bold leading-tight">{title}</span>
         <span className={`block text-xs ${primary ? "text-felt-deep/70" : "text-[color:var(--text-soft)]"}`}>{sub}</span>
       </span>
+    </Link>
+  );
+}
+
+function Mini({ href, icon, label, dot }: { href: string; icon: string; label: string; dot?: boolean }) {
+  return (
+    <Link href={href} className="tap relative flex flex-col items-center gap-1 rounded-2xl panel py-2.5 text-center">
+      {dot && <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-contre" />}
+      <span className="text-xl">{icon}</span>
+      <span className="text-[0.65rem] font-semibold">{label}</span>
     </Link>
   );
 }

@@ -11,12 +11,18 @@ export function PlayVictory({
   players,
   scores,
   rounds,
+  coinsWon,
+  won,
+  tableLabel,
   onRematch,
   onHome,
 }: {
   players: EnginePlayer[];
   scores: number[];
   rounds: RoundLike[];
+  coinsWon: number;
+  won: boolean;
+  tableLabel: string | null;
   onRematch: () => void;
   onHome: () => void;
 }) {
@@ -66,7 +72,14 @@ export function PlayVictory({
         ))}
       </ol>
 
-      <div className="mt-6 grid grid-cols-2 gap-2.5">
+      {won && coinsWon > 0 && (
+        <div className="mt-6 rounded-2xl bg-gold px-6 py-4 text-center text-felt-deep">
+          <div className="text-sm font-semibold">Gain{tableLabel ? ` — table ${tableLabel}` : ""}</div>
+          <div className="text-3xl font-black tnum">🪙 +{coinsWon}</div>
+        </div>
+      )}
+
+      <div className="mt-4 grid grid-cols-2 gap-2.5">
         <Stat label="Meilleure manche" value={`+${bestRoundPlayer?.bestRound ?? 0}`} sub={bestRoundPlayer?.name ?? ""} />
         <Stat label="Rémi secs" value={String(remiSecTotal)} sub="dans la partie" />
       </div>

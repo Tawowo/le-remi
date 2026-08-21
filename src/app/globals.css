@@ -125,7 +125,7 @@ h3,
   padding-right: max(0px, env(safe-area-inset-right));
 }
 
-/* Respect de reduced-motion : on coupe toute animation non essentielle */
+/* Respect de reduced-motion (préférence système OU réglage « animations réduites ») */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -135,6 +135,13 @@ h3,
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
   }
+}
+:root[data-anim="reduced"] *,
+:root[data-anim="reduced"] *::before,
+:root[data-anim="reduced"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
 }
 
 /* Barre de progression */

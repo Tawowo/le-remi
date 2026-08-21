@@ -8,6 +8,14 @@ import type { RoundLike } from "./profiles";
 
 const KEY_CURRENT = "remi:play:current";
 
+export interface PlayTable {
+  tier: string;
+  label: string;
+  entry: number;
+  soloWin: number;
+  felt: string;
+}
+
 export interface PlaySession {
   id: string;
   mode: "solo" | "online";
@@ -15,6 +23,8 @@ export interface PlaySession {
   createdAt: number;
   /** Journal des manches terminées (pour les stats de fin de partie). */
   roundsLog?: RoundLike[];
+  /** Table d'enjeu (mise/gain) si la partie est misée. */
+  table?: PlayTable;
 }
 
 function hasWindow(): boolean {

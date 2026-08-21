@@ -91,7 +91,7 @@ export function getCurrentGame(): Game | null {
 
 // ---------- Réglages ----------
 
-const DEFAULT_SETTINGS: Settings = { theme: "dark", sound: true };
+const DEFAULT_SETTINGS: Settings = { theme: "dark", sound: true, vibration: true, animations: "full" };
 
 export function loadSettings(): Settings {
   return { ...DEFAULT_SETTINGS, ...read<Partial<Settings>>(KEY_SETTINGS, {}) };

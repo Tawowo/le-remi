@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { ServiceWorker } from "@/components/ServiceWorker";
+import { Providers } from "@/components/Providers";
 
 export const metadata: Metadata = {
   title: "Le Rémi — Compteur de score",
@@ -34,6 +35,7 @@ const themeInit = `
     var s = JSON.parse(localStorage.getItem('remi:settings') || '{}');
     var t = s.theme || 'dark';
     document.documentElement.setAttribute('data-theme', t);
+    if (s.animations) document.documentElement.setAttribute('data-anim', s.animations);
   } catch(e){ document.documentElement.setAttribute('data-theme','dark'); }
 })();
 `;
@@ -45,7 +47,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: themeInit }} />
       </head>
       <body className="min-h-app felt-texture">
-        {children}
+        <Providers>{children}</Providers>
         <ServiceWorker />
       </body>
     </html>

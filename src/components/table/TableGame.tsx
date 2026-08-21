@@ -21,16 +21,83 @@ import { botDraw, botDiscardAndMaybePose, botThinkingDelay } from "@/lib/game/bo
 import { rankLabel } from "@/lib/game/cards";
 import { saveCurrentPlay, clearCurrentPlay, type PlaySession } from "@/lib/playStore";
 import { makeRecord, recordGame, type RoundLike } from "@/lib/profiles";
+import { useProfile } from "@/components/economy/ProfileProvider";
+import { addXp, credit, type Profile } from "@/lib/economy/profileStore";
+import { XP_EVENTS, cosmeticById } from "@/lib/economy/config";
+import { dayNumber, type LevelUpRewards } from "@/lib/economy/progression";
+import { LevelUpOverlay } from "@/components/economy/LevelUpOverlay";
+import type { RoundOutcome } from "@/lib/game/engine";
+
+/** XP gagnée par l'humain sur une manche terminée. */
+function roundXpForHuman(outcome: RoundOutcome, meIndex: number): number {
+  let xp = XP_EVENTS.roundPlayed;
+  const won = outcome.result.winners.includes(meIndex);
+  if (won) xp += XP_EVENTS.roundWon;
+  if (outcome.result.kind === "remi-sec" && outcome.poserIndex === meIndex) xp += XP_EVENTS.remiSec;
+  if ((outcome.result.kind === "contre" || outcome.result.kind === "contre-egalite") && won) {
+    xp += XP_EVENTS.contreInflicted;
+  }
+  // combinaisons de MA main révélée
+  const myDecomp = outcome.decompositions[meIndex];
+  if (myDecomp) {
+    for (const m of myDecomp.melds) {
+      if (m.kind === "brelan") xp += XP_EVENTS.brelanPosed;
+      else if (m.kind === "suite" && m.cardIds.length >= 4) xp += XP_EVENTS.suite4;
+    }
+  }
+  return xp;
+}
 
 export function TableGame({ session }: { session: PlaySession }) {
   const router = useRouter();
+  const { profile, mutate } = useProfile();
   const [state, setState] = useState<GameState>(session.state);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [thinkingId, setThinkingId] = useState<string | null>(null);
+  const [xpToast, setXpToast] = useState<string | null>(null);
+  const [levelUp, setLevelUp] = useState<{ level: number; rewards: LevelUpRewards } | null>(null);
 
   const roundsLogRef = useRef<RoundLike[]>(session.roundsLog ?? []);
   const loggedRoundRef = useRef<number>(session.roundsLog?.length ?? 0);
   const recordedRef = useRef(false);
+  const xpRoundRef = useRef<number>(session.roundsLog?.length ?? 0);
+  const coinsWonRef = useRef(0);
+  // boost XP consommé pour cette partie (si disponible)
+  const boostedRef = useRef(false);
+  const boostInitRef = useRef(false);
+
+  const equippedFelt = cosmeticById(profile.equipped.felt)?.swatch ?? "#0f2e24";
+
+  // consomme un boost au démarrage si le joueur en a
+  useEffect(() => {
+    if (boostInitRef.current) return;
+    boostInitRef.current = true;
+    if (profile.boosts > 0) {
+      boostedRef.current = true;
+      mutate((p) => ({ ...p, boosts: p.boosts - 1 }));
+    }
+  }, [profile.boosts, mutate]);
+
+  // ref synchronisée sur le profil committé (pour des calculs sûrs hors render)
+  const profileRef = useRef<Profile>(profile);
+  useEffect(() => {
+    profileRef.current = profile;
+  }, [profile]);
+
+  const flashXp = (amount: number) => {
+    if (amount <= 0) return;
+    setXpToast(`+${amount} XP`);
+    window.setTimeout(() => setXpToast(null), 1400);
+  };
+
+  /** Applique de l'XP (+ éventuel crédit de pièces) en UNE mutation, remonte le level-up. */
+  const applyProfile = (build: (p: Profile) => { profile: Profile; levelUp: LevelUpRewards | null; gained: number }) => {
+    const res = build(profileRef.current);
+    profileRef.current = res.profile;
+    mutate(() => res.profile);
+    if (res.levelUp) setLevelUp({ level: res.profile.level, rewards: res.levelUp });
+    flashXp(res.gained);
+  };
 
   const meIndex = state.players.findIndex((p) => !p.isBot);
   const me = state.players[meIndex];
@@ -56,23 +123,61 @@ export function TableGame({ session }: { session: PlaySession }) {
         { poserIndex: state.outcome.poserIndex, result: state.outcome.result },
       ];
     }
+    // XP de manche (uniquement quand la manche s'arrête sans finir la partie ;
+    // le dernier tour est traité avec les récompenses de fin de partie).
+    if (state.phase === "roundEnd" && state.outcome && xpRoundRef.current < state.roundNumber) {
+      xpRoundRef.current = state.roundNumber;
+      const outcome = state.outcome;
+      applyProfile((p) => addXp(p, roundXpForHuman(outcome, meIndex), boostedRef.current));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.phase, state.roundNumber, state.outcome]);
 
-  // --- enregistre la partie terminée ---
+  // --- enregistre la partie terminée + récompenses (pièces + XP) ---
   useEffect(() => {
-    if (state.phase === "gameEnd" && !recordedRef.current) {
-      recordedRef.current = true;
-      recordGame(
-        makeRecord(
-          "solo",
-          state.players.map((p) => ({ name: p.name, isBot: p.isBot })),
-          state.target,
-          roundsLogRef.current,
-        ),
-      );
-      clearCurrentPlay();
-    }
-  }, [state.phase, state.players, state.target]);
+    if (state.phase !== "gameEnd" || recordedRef.current) return;
+    recordedRef.current = true;
+
+    const won = state.winnerIndex === meIndex;
+    const table = session.table;
+    const finalOutcome = state.outcome;
+    const today = dayNumber(Date.now());
+
+    applyProfile((p0) => {
+      let np = p0;
+      let xp = 0;
+      // dernière manche (elle a fini la partie → pas passée par roundEnd)
+      if (finalOutcome && xpRoundRef.current < state.roundNumber) {
+        xpRoundRef.current = state.roundNumber;
+        xp += roundXpForHuman(finalOutcome, meIndex);
+      }
+      // première partie du jour
+      if (p0.lastPlayDay !== today) {
+        xp += XP_EVENTS.firstGameOfDay;
+        np = { ...np, lastPlayDay: today };
+      }
+      // victoire : gain de la table + XP
+      if (won) {
+        xp += XP_EVENTS.gameWon;
+        if (table && table.soloWin > 0) {
+          np = credit(np, table.soloWin, `Victoire ${table.label}`);
+          coinsWonRef.current = table.soloWin;
+        }
+      }
+      return addXp(np, xp, boostedRef.current);
+    });
+
+    recordGame(
+      makeRecord(
+        "solo",
+        state.players.map((p) => ({ name: p.name, isBot: p.isBot })),
+        state.target,
+        roundsLogRef.current,
+      ),
+    );
+    clearCurrentPlay();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.phase, state.winnerIndex]);
 
   // --- pilote les bots ---
   useEffect(() => {
@@ -160,21 +265,45 @@ export function TableGame({ session }: { session: PlaySession }) {
   const activeId = state.players[state.turn]?.id ?? null;
   const top = topDiscard(state);
 
+  const overlays = (
+    <>
+      {xpToast && (
+        <div className="pointer-events-none fixed left-1/2 top-24 z-[55] -translate-x-1/2 animate-pop-gold rounded-full bg-gold px-4 py-1.5 text-sm font-bold text-felt-deep shadow-glow">
+          {xpToast}
+          {boostedRef.current && " ×2 ⚡"}
+        </div>
+      )}
+      {levelUp && (
+        <LevelUpOverlay level={levelUp.level} rewards={levelUp.rewards} onClose={() => setLevelUp(null)} />
+      )}
+    </>
+  );
+
   // --- écrans de fin ---
   if (state.phase === "gameEnd") {
     return (
-      <PlayVictory
-        players={state.players}
-        scores={state.scores}
-        rounds={roundsLogRef.current}
-        onRematch={rematch}
-        onHome={() => router.push("/")}
-      />
+      <>
+        {overlays}
+        <PlayVictory
+          players={state.players}
+          scores={state.scores}
+          rounds={roundsLogRef.current}
+          coinsWon={coinsWonRef.current}
+          won={state.winnerIndex === meIndex}
+          tableLabel={session.table?.label ?? null}
+          onRematch={rematch}
+          onHome={() => router.push("/")}
+        />
+      </>
     );
   }
 
   return (
-    <main className="mx-auto flex h-app max-w-md flex-col px-3 safe-top safe-bottom pt-2">
+    <main
+      className="mx-auto flex h-app max-w-md flex-col px-3 safe-top safe-bottom pt-2"
+      style={{ background: equippedFelt }}
+    >
+      {overlays}
       <header className="flex items-center justify-between px-1">
         <button onClick={() => router.push("/")} className="tap rounded-full panel px-3 text-lg" aria-label="Accueil">
           ⌂
