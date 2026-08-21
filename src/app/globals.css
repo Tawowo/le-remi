@@ -148,3 +148,46 @@ h3,
 .progress-track {
   background: color-mix(in srgb, var(--text-soft) 22%, transparent);
 }
+
+/* ============================================================
+   AMBIANCES DE TAPIS (transform/opacity only, 60 fps ; coupées
+   automatiquement en reduced-motion / animations réduites).
+   ============================================================ */
+@keyframes amb-drift {
+  0% { transform: translate3d(-3%, -2%, 0) scale(1.05); }
+  50% { transform: translate3d(3%, 2%, 0) scale(1.12); }
+  100% { transform: translate3d(-3%, -2%, 0) scale(1.05); }
+}
+@keyframes amb-twinkle {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 0.9; }
+}
+@keyframes amb-pulse {
+  0%, 100% { opacity: 0.35; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.06); }
+}
+@keyframes amb-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes amb-aurora {
+  0% { transform: translateX(-6%) skewX(-6deg); opacity: 0.5; }
+  50% { transform: translateX(6%) skewX(6deg); opacity: 0.85; }
+  100% { transform: translateX(-6%) skewX(-6deg); opacity: 0.5; }
+}
+@keyframes amb-sheen {
+  0% { transform: translateX(-120%); }
+  100% { transform: translateX(120%); }
+}
+@keyframes amb-rise {
+  0% { transform: translateY(0); opacity: 0; }
+  15% { opacity: 0.8; }
+  100% { transform: translateY(-120px); opacity: 0; }
+}
+.amb-drift { animation: amb-drift 26s ease-in-out infinite; }
+.amb-twinkle { animation: amb-twinkle 4s ease-in-out infinite; }
+.amb-pulse { animation: amb-pulse 8s ease-in-out infinite; }
+.amb-rotate { animation: amb-rotate 90s linear infinite; }
+.amb-aurora { animation: amb-aurora 18s ease-in-out infinite; }
+.amb-sheen { animation: amb-sheen 9s ease-in-out infinite; }
+.amb-rise { animation: amb-rise 9s linear infinite; }

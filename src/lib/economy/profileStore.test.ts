@@ -28,8 +28,8 @@ describe("profil — XP & montée de niveau", () => {
     const r = addXp(p, 1118); // niveau 5
     expect(r.profile.level).toBe(5);
     expect(r.levelUp?.levels).toEqual([2, 3, 4, 5]);
-    // le palier 5 débloque le cosmétique back-as-coeur
-    expect(r.profile.owned).toContain("back-as-coeur");
+    // le palier 5 débloque le cosmétique back-artdeco
+    expect(r.profile.owned).toContain("back-artdeco");
   });
 
   it("le boost XP ×2 double le gain", () => {

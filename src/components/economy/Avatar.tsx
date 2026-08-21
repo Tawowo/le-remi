@@ -1,8 +1,9 @@
 "use client";
 
-import { cosmeticById } from "@/lib/economy/config";
+import { frameColor } from "@/lib/cosmetics/catalog";
+import { AvatarArt } from "@/components/cosmetics/AvatarArt";
 
-/** Avatar rond : emoji de galerie OU photo (data:URL), avec cadre équipé. */
+/** Avatar rond : portrait illustré (id « av-* »), emoji, ou photo (data:URL). */
 export function Avatar({
   avatar,
   color,
@@ -17,7 +18,8 @@ export function Avatar({
   level?: number;
 }) {
   const isPhoto = avatar.startsWith("data:");
-  const frameColor = frame ? cosmeticById(frame)?.swatch ?? "transparent" : "transparent";
+  const isArt = avatar.startsWith("av-");
+  const fc = frame ? frameColor(frame) ?? "transparent" : "transparent";
   const ring = frame ? 3 : 0;
 
   return (
@@ -25,14 +27,16 @@ export function Avatar({
       <div
         className="flex h-full w-full items-center justify-center overflow-hidden rounded-full"
         style={{
-          background: isPhoto ? "#000" : color,
-          boxShadow: ring ? `0 0 0 ${ring}px ${frameColor}` : undefined,
+          background: isPhoto || isArt ? "#000" : color,
+          boxShadow: ring ? `0 0 0 ${ring}px ${fc}` : undefined,
           fontSize: size * 0.55,
         }}
       >
         {isPhoto ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={avatar} alt="avatar" className="h-full w-full object-cover" />
+        ) : isArt ? (
+          <AvatarArt id={avatar} size={size} />
         ) : (
           <span>{avatar}</span>
         )}

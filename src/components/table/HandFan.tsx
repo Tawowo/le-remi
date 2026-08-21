@@ -11,12 +11,14 @@ export function HandFan({
   selectedId,
   onSelect,
   disabled = false,
+  deck = "deck-classique",
 }: {
   cards: Card[];
   meldedIds: Set<string>;
   selectedId: string | null;
   onSelect: (id: string) => void;
   disabled?: boolean;
+  deck?: string;
 }) {
   const n = cards.length;
   const spread = Math.min(4, 28 / Math.max(1, n)); // degrés par carte
@@ -51,7 +53,7 @@ export function HandFan({
                   selected ? "ring-2 ring-ivory" : "",
                 ].join(" ")}
               >
-                <PlayingCard rank={rankLabel(c.rank) as Rank} suit={c.suit} width={54} />
+                <PlayingCard rank={rankLabel(c.rank) as Rank} suit={c.suit} width={54} deck={deck} />
               </span>
             </button>
           );

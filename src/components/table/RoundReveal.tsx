@@ -13,12 +13,14 @@ export function RoundReveal({
   scores,
   isGameEnd,
   onNext,
+  deck = "deck-classique",
 }: {
   players: EnginePlayer[];
   outcome: RoundOutcome;
   scores: number[];
   isGameEnd: boolean;
   onNext: () => void;
+  deck?: string;
 }) {
   const { result, decompositions, poserIndex, points } = outcome;
   const celebrate = result.kind === "remi-sec";
@@ -86,7 +88,7 @@ export function RoundReveal({
                       const inMeld = melded.has(c.id);
                       return (
                         <span key={c.id} className={inMeld ? "rounded-[7px] ring-2 ring-gold" : "opacity-90"}>
-                          <PlayingCard rank={rankLabel(c.rank) as Rank} suit={c.suit} width={30} />
+                          <PlayingCard rank={rankLabel(c.rank) as Rank} suit={c.suit} width={30} deck={deck} />
                         </span>
                       );
                     })}

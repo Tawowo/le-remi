@@ -8,10 +8,12 @@ export function OpponentArc({
   opponents,
   activeId,
   thinkingId,
+  backId = "back-classique",
 }: {
   opponents: { player: EnginePlayer; index: number }[];
   activeId: string | null;
   thinkingId: string | null;
+  backId?: string;
 }) {
   return (
     <div className="flex flex-wrap items-start justify-center gap-3 px-2">
@@ -38,7 +40,7 @@ export function OpponentArc({
             <div className="relative mt-1 flex h-8 items-center justify-center" style={{ paddingLeft: 10 }}>
               {Array.from({ length: backs }).map((_, i) => (
                 <span key={i} style={{ marginLeft: -10, zIndex: i }}>
-                  <PlayingCard rank="A" suit="spades" width={20} faceDown />
+                  <PlayingCard rank="A" suit="spades" width={20} faceDown backId={backId} />
                 </span>
               ))}
             </div>

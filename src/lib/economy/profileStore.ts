@@ -4,12 +4,8 @@
  * Le solde/niveau seront répliqués côté Supabase en ligne (affichage aux autres).
  */
 
-import {
-  STARTING_COINS,
-  DEFAULT_OWNED,
-  MAX_LEVEL,
-  levelForXp,
-} from "./config";
+import { STARTING_COINS, MAX_LEVEL, levelForXp } from "./config";
+import { DEFAULT_OWNED, DEFAULT_EQUIPPED, cosmetic } from "../cosmetics/catalog";
 import { levelUpRewards, type LevelUpRewards } from "./progression";
 
 const KEY = "remi:profile";
@@ -25,6 +21,7 @@ export interface WalletEntry {
 export interface Equipped {
   back: string;
   felt: string;
+  deck: string;
   frame: string | null;
 }
 
@@ -56,7 +53,7 @@ export function defaultProfile(): Profile {
     version: VERSION,
     onboarded: false,
     pseudo: "",
-    avatar: AVATAR_GALLERY[0],
+    avatar: "av-chat",
     color: "#d4af37",
     title: "Apprenti du Rémi",
     coins: STARTING_COINS,
@@ -66,7 +63,7 @@ export function defaultProfile(): Profile {
     lastDailyDay: -1,
     lastWheelMs: 0,
     owned: [...DEFAULT_OWNED],
-    equipped: { back: "back-classique", felt: "felt-vert", frame: null },
+    equipped: { ...DEFAULT_EQUIPPED },
     boosts: 0,
     titlesUnlocked: ["Apprenti du Rémi"],
     wallet: [],
@@ -82,18 +79,37 @@ function migrate(raw: unknown): Profile {
   const base = defaultProfile();
   if (!raw || typeof raw !== "object") return base;
   const p = raw as Partial<Profile>;
-  // Fusion tolérante (les champs manquants prennent la valeur par défaut).
+  // Migration des anciens ids de cosmétiques (V3 → Collections).
+  const remapFelt = (id?: string) => (id && id.startsWith("felt-") && !id.startsWith("felt-emeraude") && LEGACY_FELT[id]) || id;
+  const eqIn: Partial<Equipped> = p.equipped ?? {};
+  const equipped: Equipped = {
+    back: BY_ID_HAS(eqIn.back) ? eqIn.back! : "back-classique",
+    felt: BY_ID_HAS(remapFelt(eqIn.felt)) ? (remapFelt(eqIn.felt) as string) : "felt-emeraude",
+    deck: BY_ID_HAS(eqIn.deck) ? (eqIn.deck as string) : "deck-classique",
+    frame: eqIn.frame && BY_ID_HAS(eqIn.frame) ? eqIn.frame : null,
+  };
+
   const merged: Profile = {
     ...base,
     ...p,
     version: VERSION,
-    equipped: { ...base.equipped, ...(p.equipped ?? {}) },
+    equipped,
     owned: Array.isArray(p.owned) ? Array.from(new Set([...DEFAULT_OWNED, ...p.owned])) : base.owned,
     titlesUnlocked: Array.isArray(p.titlesUnlocked) ? p.titlesUnlocked : base.titlesUnlocked,
     wallet: Array.isArray(p.wallet) ? p.wallet : [],
   };
   merged.level = levelForXp(merged.xp);
   return merged;
+}
+
+const LEGACY_FELT: Record<string, string> = {
+  "felt-vert": "felt-emeraude",
+  "felt-bois": "felt-noyer",
+  "felt-minuit": "felt-velours",
+  "felt-or": "felt-trone",
+};
+function BY_ID_HAS(id?: string): boolean {
+  return !!id && !!cosmetic(id);
 }
 
 export function loadProfile(): Profile {
@@ -171,6 +187,10 @@ export function grantCosmetic(p: Profile, id: string): Profile {
   return { ...p, owned: [...p.owned, id] };
 }
 
-export function equip(p: Profile, type: "back" | "felt" | "frame", id: string | null): Profile {
+export function equip(p: Profile, type: "back" | "felt" | "deck" | "frame", id: string | null): Profile {
   return { ...p, equipped: { ...p.equipped, [type]: id } };
+}
+
+export function setAvatar(p: Profile, avatar: string): Profile {
+  return { ...p, avatar };
 }

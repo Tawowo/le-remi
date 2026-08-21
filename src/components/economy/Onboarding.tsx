@@ -3,8 +3,12 @@
 import { useRef, useState } from "react";
 import { useProfile } from "./ProfileProvider";
 import { Avatar } from "./Avatar";
+import { AvatarArt } from "@/components/cosmetics/AvatarArt";
 import { AVATAR_GALLERY } from "@/lib/economy/profileStore";
+import { DEFAULT_OWNED } from "@/lib/cosmetics/catalog";
 import { AVATAR_COLORS } from "@/lib/table";
+
+const FREE_AVATARS = DEFAULT_OWNED.filter((id) => id.startsWith("av-"));
 import { STARTING_COINS } from "@/lib/economy/config";
 import { Confetti } from "@/components/Confetti";
 
@@ -13,7 +17,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
   const { mutate } = useProfile();
   const [step, setStep] = useState<0 | 1 | 2>(0);
   const [pseudo, setPseudo] = useState("");
-  const [avatar, setAvatar] = useState(AVATAR_GALLERY[0]);
+  const [avatar, setAvatar] = useState(FREE_AVATARS[0] ?? AVATAR_GALLERY[0]);
   const [color, setColor] = useState(AVATAR_COLORS[0]);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -63,12 +67,23 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
               <Avatar avatar={avatar} color={color} size={96} />
             </div>
 
-            <div className="mt-4 grid grid-cols-6 gap-2">
+            <div className="mt-4 grid grid-cols-4 gap-2">
+              {FREE_AVATARS.map((id) => (
+                <button
+                  key={id}
+                  onClick={() => setAvatar(id)}
+                  className={`tap overflow-hidden rounded-xl ${avatar === id ? "ring-2 ring-gold" : ""}`}
+                >
+                  <AvatarArt id={id} size={64} />
+                </button>
+              ))}
+            </div>
+            <div className="mt-2 grid grid-cols-6 gap-2">
               {AVATAR_GALLERY.map((a) => (
                 <button
                   key={a}
                   onClick={() => setAvatar(a)}
-                  className={`tap flex h-11 items-center justify-center rounded-xl text-2xl ${
+                  className={`tap flex h-10 items-center justify-center rounded-xl text-xl ${
                     avatar === a ? "bg-gold" : "panel-soft"
                   }`}
                 >
@@ -76,6 +91,9 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
                 </button>
               ))}
             </div>
+            <p className="mt-2 text-center text-xs text-[color:var(--text-soft)]">
+              Débloque 30+ portraits illustrés dans la boutique.
+            </p>
 
             <div className="mt-3 flex items-center gap-2">
               {AVATAR_COLORS.map((c) => (

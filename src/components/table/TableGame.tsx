@@ -23,7 +23,8 @@ import { saveCurrentPlay, clearCurrentPlay, type PlaySession } from "@/lib/playS
 import { makeRecord, recordGame, type RoundLike } from "@/lib/profiles";
 import { useProfile } from "@/components/economy/ProfileProvider";
 import { addXp, credit, type Profile } from "@/lib/economy/profileStore";
-import { XP_EVENTS, cosmeticById } from "@/lib/economy/config";
+import { XP_EVENTS } from "@/lib/economy/config";
+import { Felt } from "@/components/cosmetics/Felt";
 import { dayNumber, type LevelUpRewards } from "@/lib/economy/progression";
 import { LevelUpOverlay } from "@/components/economy/LevelUpOverlay";
 import type { RoundOutcome } from "@/lib/game/engine";
@@ -66,7 +67,9 @@ export function TableGame({ session }: { session: PlaySession }) {
   const boostedRef = useRef(false);
   const boostInitRef = useRef(false);
 
-  const equippedFelt = cosmeticById(profile.equipped.felt)?.swatch ?? "#0f2e24";
+  const equippedFelt = profile.equipped.felt;
+  const equippedDeck = profile.equipped.deck;
+  const equippedBack = profile.equipped.back;
 
   // consomme un boost au démarrage si le joueur en a
   useEffect(() => {
@@ -299,11 +302,10 @@ export function TableGame({ session }: { session: PlaySession }) {
   }
 
   return (
-    <main
-      className="mx-auto flex h-app max-w-md flex-col px-3 safe-top safe-bottom pt-2"
-      style={{ background: equippedFelt }}
-    >
+    <main className="relative mx-auto flex h-app max-w-md flex-col px-3 safe-top safe-bottom pt-2">
+      <Felt id={equippedFelt} />
       {overlays}
+      <div className="relative z-10 flex flex-1 flex-col">
       <header className="flex items-center justify-between px-1">
         <button onClick={() => router.push("/")} className="tap rounded-full panel px-3 text-lg" aria-label="Accueil">
           ⌂
@@ -318,7 +320,7 @@ export function TableGame({ session }: { session: PlaySession }) {
 
       {/* Adversaires */}
       <div className="mt-2">
-        <OpponentArc opponents={opponents} activeId={activeId} thinkingId={thinkingId} />
+        <OpponentArc opponents={opponents} activeId={activeId} thinkingId={thinkingId} backId={equippedBack} />
       </div>
 
       {/* Centre : pioche + défausse */}
@@ -332,7 +334,7 @@ export function TableGame({ session }: { session: PlaySession }) {
             }`}
             aria-label="Piocher au talon"
           >
-            <PlayingCard rank="A" suit="spades" width={62} faceDown />
+            <PlayingCard rank="A" suit="spades" width={62} faceDown backId={equippedBack} />
             <span className="text-[0.7rem] text-[color:var(--text-soft)]">pioche ({state.stock.length})</span>
           </button>
 
@@ -345,7 +347,7 @@ export function TableGame({ session }: { session: PlaySession }) {
             aria-label="Prendre la défausse"
           >
             {top ? (
-              <PlayingCard rank={rankLabel(top.rank) as never} suit={top.suit} width={62} />
+              <PlayingCard rank={rankLabel(top.rank) as never} suit={top.suit} width={62} deck={equippedDeck} />
             ) : (
               <span className="flex h-[87px] w-[62px] items-center justify-center rounded-lg panel-soft text-xs text-[color:var(--text-soft)]">
                 vide
@@ -381,6 +383,7 @@ export function TableGame({ session }: { session: PlaySession }) {
           selectedId={selectedId}
           onSelect={(id) => setSelectedId((s) => (s === id ? null : id))}
           disabled={!myTurn}
+          deck={equippedDeck}
         />
 
         {/* Barre d'action */}
@@ -416,6 +419,8 @@ export function TableGame({ session }: { session: PlaySession }) {
         </div>
       </div>
 
+      </div>
+
       {/* Révélation de fin de manche */}
       {state.phase === "roundEnd" && state.outcome && (
         <RoundReveal
@@ -424,6 +429,7 @@ export function TableGame({ session }: { session: PlaySession }) {
           scores={state.scores}
           isGameEnd={false}
           onNext={goNextRound}
+          deck={equippedDeck}
         />
       )}
     </main>

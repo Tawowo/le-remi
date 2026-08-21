@@ -51,7 +51,7 @@ describe("courbe d'XP (100 × N^1.5)", () => {
 
   it("les paliers marquants octroient des cosmétiques/titres", () => {
     const r = levelUpRewards(4, 5);
-    expect(r.cosmetics).toContain("back-as-coeur");
+    expect(r.cosmetics).toContain("back-artdeco");
   });
 });
 

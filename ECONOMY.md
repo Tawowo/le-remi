@@ -89,20 +89,32 @@ plus, aux paliers marquants, des cosmétiques/titres exclusifs (niv. 5 : dos
 25 : titre « Maître du Carré »). Des **Boosts XP ×2** (3 parties) sont
 gagnables aux niveaux et à la roue.
 
-## Boutique (cosmétiques, en pièces uniquement)
+## Boutique — Collections (cosmétiques, en pièces uniquement)
 
-| Type | Exemples | Fourchette |
-|---|---|---|
-| Dos de cartes | classique (0), As de cœur (300), Royal (800), Doré (2 000) | 300–2 000 |
-| Tapis | feutrine (0), bois (500), minuit (1 500), or (3 000) | 500–3 000 |
-| Cadres d'avatar | argent (400), doré (1 500) | 400–1 500 |
-| Pack d'avatars | 250 | 250 |
+Tout est **généré par le code** (SVG/CSS, aucun fichier externe). Prix dérivés
+de la **rareté** par catégorie (grille centralisée `PRICE_TABLE` dans
+`src/lib/cosmetics/types.ts`). Rangée en 4 rayons + Cadres, compteur de
+collection (« 9/24 »), aperçu en situation.
 
-Débloquables **uniquement** avec des pièces gagnées en jouant. Aperçu en direct,
-« équipé » par profil.
+| Rayon | Nombre | Commun | Rare | Épique | Légendaire |
+|---|---|---|---|---|---|
+| Tapis | 24 (6 collections) | 500 | 1 500 | 4 000 | 10 000 |
+| Dos de cartes | 12 | 300 | 800 | 1 500 | 2 000 |
+| Jeux de cartes (faces) | 6 | 0 | 2 000 | 4 000 | 6 000 |
+| Avatars | 36 (6 séries) | 250 | 800 | 1 500 | 2 500 |
+| Cadres | 12 | 400 | 700 | 1 100 | 1 500 |
+
+Certains cosmétiques sont **verrouillés par niveau** (les tapis Légende à niv.
+15, dos Dragon niv. 10, cadre Or niv. 15, jeu Royaume niv. 20) ou par
+**exploit** (tapis « Le Centenaire » : gagner avec 100 points d'écart). Ils
+deviennent des objectifs de jeu. Débloquables **uniquement** en pièces gagnées
+en jouant. Les choix équipés sont partagés par leurs **IDs** (prêts pour la
+synchro en ligne — aucun asset transféré, tout est regénéré localement).
 
 ## Où ajuster
 
-Tout est dans `src/lib/economy/config.ts` :
-`STARTING_COINS`, `DAILY_BONUS_BY_STREAK`, `WHEEL_SEGMENTS`, `TABLES`,
-`XP_EVENTS`, `xpToReachLevel`, `LEVEL_MILESTONES`, `SHOP`.
+- Monnaie/progression : `src/lib/economy/config.ts`
+  (`STARTING_COINS`, `DAILY_BONUS_BY_STREAK`, `WHEEL_SEGMENTS`, `TABLES`,
+  `XP_EVENTS`, `xpToReachLevel`, `LEVEL_MILESTONES`).
+- Cosmétiques : `src/lib/cosmetics/types.ts` (`PRICE_TABLE`) et
+  `src/lib/cosmetics/catalog.ts` (les 90 cosmétiques et leurs déblocages).

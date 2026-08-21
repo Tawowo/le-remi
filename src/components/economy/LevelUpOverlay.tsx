@@ -1,7 +1,7 @@
 "use client";
 
 import { Confetti } from "@/components/Confetti";
-import { cosmeticById } from "@/lib/economy/config";
+import { cosmeticName } from "@/lib/cosmetics/catalog";
 import type { LevelUpRewards } from "@/lib/economy/progression";
 
 /** Écran de level-up : médaillon forgé + récompenses révélées. */
@@ -26,7 +26,7 @@ export function LevelUpOverlay({
       <div className="mt-4 rounded-2xl bg-gold/15 px-5 py-3 text-ivory">
         {rewards.coins > 0 && <div className="text-lg font-bold">+{rewards.coins} 🪙</div>}
         {rewards.cosmetics.map((c) => (
-          <div key={c} className="text-sm text-gold">🎁 {cosmeticById(c)?.label ?? c} débloqué</div>
+          <div key={c} className="text-sm text-gold">🎁 {cosmeticName(c)} débloqué</div>
         ))}
         {rewards.titles.map((t) => (
           <div key={t} className="text-sm text-gold">🏷️ Titre « {t} »</div>

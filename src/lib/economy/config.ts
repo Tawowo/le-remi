@@ -120,48 +120,16 @@ export interface MilestoneReward {
   title?: string;
   boosts?: number;
 }
-/** Cosmétiques/titres exclusifs aux paliers marquants. */
+/** Cosmétiques/titres exclusifs aux paliers marquants (ids du catalogue). */
 export const LEVEL_MILESTONES: Record<number, MilestoneReward> = {
-  5: { cosmeticId: "back-as-coeur" },
-  10: { cosmeticId: "felt-minuit" },
-  15: { cosmeticId: "frame-dore" },
-  20: { cosmeticId: "avatar-legendaire" },
+  5: { cosmeticId: "back-artdeco" },
+  10: { cosmeticId: "back-dragon" },
+  15: { cosmeticId: "frame-or" },
+  20: { cosmeticId: "deck-royaume" },
   25: { title: "Maître du Carré" },
 };
 
-/** ------------------------------------------------------------- Boutique */
-
-export type CosmeticType = "back" | "felt" | "frame" | "avatarpack";
-
-export interface Cosmetic {
-  id: string;
-  type: CosmeticType;
-  label: string;
-  price: number;
-  /** Aperçu (couleur ou dégradé). */
-  swatch: string;
-}
-
-export const SHOP: Cosmetic[] = [
-  { id: "back-classique", type: "back", label: "Dos classique", price: 0, swatch: "linear-gradient(135deg,#14402f,#0a241a)" },
-  { id: "back-as-coeur", type: "back", label: "Dos As de cœur", price: 300, swatch: "linear-gradient(135deg,#7a1220,#3a0810)" },
-  { id: "back-royal", type: "back", label: "Dos Royal", price: 800, swatch: "linear-gradient(135deg,#1a2b6b,#0a1230)" },
-  { id: "back-or", type: "back", label: "Dos Doré", price: 2000, swatch: "linear-gradient(135deg,#b8912a,#f4d670)" },
-  { id: "felt-vert", type: "felt", label: "Tapis feutrine", price: 0, swatch: "#0f2e24" },
-  { id: "felt-bois", type: "felt", label: "Tapis bois", price: 500, swatch: "#4a3520" },
-  { id: "felt-minuit", type: "felt", label: "Tapis minuit", price: 1500, swatch: "#0a1230" },
-  { id: "felt-or", type: "felt", label: "Tapis or", price: 3000, swatch: "linear-gradient(135deg,#3a2e0a,#b8912a)" },
-  { id: "frame-argent", type: "frame", label: "Cadre argent", price: 400, swatch: "#c0c0c0" },
-  { id: "frame-dore", type: "frame", label: "Cadre doré", price: 1500, swatch: "#d4af37" },
-  { id: "avatar-pack-1", type: "avatarpack", label: "Pack d'avatars", price: 250, swatch: "linear-gradient(135deg,#b57edc,#4aa8d8)" },
-];
-
-export function cosmeticById(id: string): Cosmetic | undefined {
-  return SHOP.find((c) => c.id === id);
-}
-
-/** Cosmétiques possédés par défaut (gratuits). */
-export const DEFAULT_OWNED = ["back-classique", "felt-vert"];
+/* La boutique et les cosmétiques vivent désormais dans src/lib/cosmetics/. */
 
 /** ------------------------------------------------------------- Titres */
 
