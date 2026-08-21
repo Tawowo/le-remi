@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { Game } from "@/lib/types";
 import { loadGames, deleteGame, setCurrentGame } from "@/lib/storage";
-import { totals } from "@/lib/game";
+import { totals } from "@/lib/table";
 
 function fmtDate(ms: number): string {
   return new Date(ms).toLocaleDateString("fr-FR", {
@@ -35,7 +35,7 @@ export default function HistoryPage() {
   };
 
   return (
-    <main className="mx-auto min-h-screen max-w-md px-5 pt-6 safe-bottom">
+    <main className="mx-auto min-h-app max-w-md px-5 safe-top safe-bottom pt-2">
       <header className="mb-5 flex items-center gap-3">
         <Link href="/" className="tap flex items-center rounded-full panel px-3 text-lg" aria-label="Retour">
           ←

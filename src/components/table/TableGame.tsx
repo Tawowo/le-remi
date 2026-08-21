@@ -1,0 +1,321 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { PlayingCard } from "@/components/PlayingCard";
+import { HandFan } from "./HandFan";
+import { OpponentArc } from "./OpponentArc";
+import { RoundReveal } from "./RoundReveal";
+import { PlayVictory } from "./PlayVictory";
+import {
+  drawCard,
+  discardCard,
+  layDown,
+  nextRound,
+  startGame,
+  topDiscard,
+  type GameState,
+} from "@/lib/game/engine";
+import { bestDecomposition, isolatedPoints } from "@/lib/game/combinations";
+import { botDraw, botDiscardAndMaybePose, botThinkingDelay } from "@/lib/game/bots";
+import { rankLabel } from "@/lib/game/cards";
+import { saveCurrentPlay, clearCurrentPlay, type PlaySession } from "@/lib/playStore";
+import { makeRecord, recordGame, type RoundLike } from "@/lib/profiles";
+
+export function TableGame({ session }: { session: PlaySession }) {
+  const router = useRouter();
+  const [state, setState] = useState<GameState>(session.state);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [thinkingId, setThinkingId] = useState<string | null>(null);
+
+  const roundsLogRef = useRef<RoundLike[]>(session.roundsLog ?? []);
+  const loggedRoundRef = useRef<number>(session.roundsLog?.length ?? 0);
+  const recordedRef = useRef(false);
+
+  const meIndex = state.players.findIndex((p) => !p.isBot);
+  const me = state.players[meIndex];
+  const myTurn = state.turn === meIndex && (state.phase === "draw" || state.phase === "discard");
+
+  // --- persistance continue ---
+  useEffect(() => {
+    if (state.phase !== "gameEnd") {
+      saveCurrentPlay({ ...session, state, roundsLog: roundsLogRef.current });
+    }
+  }, [state, session]);
+
+  // --- journalise chaque manche terminée (pour les stats) ---
+  useEffect(() => {
+    if (
+      (state.phase === "roundEnd" || state.phase === "gameEnd") &&
+      state.outcome &&
+      loggedRoundRef.current < state.roundNumber
+    ) {
+      loggedRoundRef.current = state.roundNumber;
+      roundsLogRef.current = [
+        ...roundsLogRef.current,
+        { poserIndex: state.outcome.poserIndex, result: state.outcome.result },
+      ];
+    }
+  }, [state.phase, state.roundNumber, state.outcome]);
+
+  // --- enregistre la partie terminée ---
+  useEffect(() => {
+    if (state.phase === "gameEnd" && !recordedRef.current) {
+      recordedRef.current = true;
+      recordGame(
+        makeRecord(
+          "solo",
+          state.players.map((p) => ({ name: p.name, isBot: p.isBot })),
+          state.target,
+          roundsLogRef.current,
+        ),
+      );
+      clearCurrentPlay();
+    }
+  }, [state.phase, state.players, state.target]);
+
+  // --- pilote les bots ---
+  useEffect(() => {
+    if (state.phase !== "draw" && state.phase !== "discard") return;
+    const cur = state.players[state.turn];
+    if (!cur.isBot) return;
+
+    setThinkingId(cur.id);
+    const delay = botThinkingDelay(state);
+    const t = setTimeout(() => {
+      setState((prev) => {
+        const p = prev.players[prev.turn];
+        if (!p.isBot) return prev;
+        if (prev.phase === "draw") return drawCard(prev, botDraw(prev));
+        if (prev.phase === "discard") {
+          const plan = botDiscardAndMaybePose(prev);
+          return plan.pose ? layDown(prev, plan.cardId) : discardCard(prev, plan.cardId);
+        }
+        return prev;
+      });
+      setThinkingId(null);
+    }, delay);
+
+    return () => {
+      clearTimeout(t);
+      setThinkingId(null);
+    };
+  }, [state]);
+
+  // --- décomposition de ma main (combinaisons dorées + points isolés) ---
+  const myDecomp = useMemo(() => bestDecomposition(me?.hand ?? []), [me?.hand]);
+  const meldedIds = useMemo(
+    () => new Set(myDecomp.melds.flatMap((m) => m.cardIds)),
+    [myDecomp],
+  );
+  const myIsolated = myDecomp.isolatedPoints;
+
+  // points isolés si je jette la carte sélectionnée
+  const isolatedAfterDiscard = useMemo(() => {
+    if (!selectedId || !me) return null;
+    return isolatedPoints(me.hand.filter((c) => c.id !== selectedId));
+  }, [selectedId, me]);
+
+  const canPose =
+    state.phase === "discard" && myTurn && selectedId != null && (isolatedAfterDiscard ?? 99) <= 10;
+
+  // --- actions humaines ---
+  const doDraw = (source: "stock" | "discard") => {
+    if (!myTurn || state.phase !== "draw") return;
+    setState((s) => drawCard(s, source));
+    setSelectedId(null);
+  };
+  const doDiscard = () => {
+    if (!myTurn || state.phase !== "discard" || !selectedId) return;
+    setState((s) => discardCard(s, selectedId));
+    setSelectedId(null);
+  };
+  const doPose = () => {
+    if (!canPose || !selectedId) return;
+    setState((s) => layDown(s, selectedId));
+    setSelectedId(null);
+  };
+
+  const goNextRound = useCallback(() => {
+    setState((s) => nextRound(s));
+    setSelectedId(null);
+  }, []);
+
+  const rematch = () => {
+    const rotated = [...state.players.slice(1), state.players[0]].map((p) => ({ ...p, hand: [] }));
+    const fresh = startGame(rotated, { target: state.target, dealerIndex: 0 });
+    roundsLogRef.current = [];
+    loggedRoundRef.current = 0;
+    recordedRef.current = false;
+    saveCurrentPlay({ ...session, state: fresh, roundsLog: [] });
+    setState(fresh);
+  };
+
+  if (!me) return null;
+
+  const opponents = state.players
+    .map((player, index) => ({ player, index }))
+    .filter((e) => e.index !== meIndex);
+
+  const activeId = state.players[state.turn]?.id ?? null;
+  const top = topDiscard(state);
+
+  // --- écrans de fin ---
+  if (state.phase === "gameEnd") {
+    return (
+      <PlayVictory
+        players={state.players}
+        scores={state.scores}
+        rounds={roundsLogRef.current}
+        onRematch={rematch}
+        onHome={() => router.push("/")}
+      />
+    );
+  }
+
+  return (
+    <main className="mx-auto flex h-app max-w-md flex-col px-3 safe-top safe-bottom pt-2">
+      <header className="flex items-center justify-between px-1">
+        <button onClick={() => router.push("/")} className="tap rounded-full panel px-3 text-lg" aria-label="Accueil">
+          ⌂
+        </button>
+        <div className="text-center">
+          <div className="text-[0.7rem] uppercase tracking-widest text-[color:var(--text-soft)]">
+            Manche {state.roundNumber} · objectif {state.target}
+          </div>
+        </div>
+        <div className="w-10" />
+      </header>
+
+      {/* Adversaires */}
+      <div className="mt-2">
+        <OpponentArc opponents={opponents} activeId={activeId} thinkingId={thinkingId} />
+      </div>
+
+      {/* Centre : pioche + défausse */}
+      <div className="flex flex-1 flex-col items-center justify-center gap-3">
+        <div className="flex items-center gap-6">
+          <button
+            onClick={() => doDraw("stock")}
+            disabled={!myTurn || state.phase !== "draw"}
+            className={`flex flex-col items-center gap-1 rounded-xl p-1 ${
+              myTurn && state.phase === "draw" ? "ring-2 ring-gold shadow-glow" : ""
+            }`}
+            aria-label="Piocher au talon"
+          >
+            <PlayingCard rank="A" suit="spades" width={62} faceDown />
+            <span className="text-[0.7rem] text-[color:var(--text-soft)]">pioche ({state.stock.length})</span>
+          </button>
+
+          <button
+            onClick={() => doDraw("discard")}
+            disabled={!myTurn || state.phase !== "draw" || !top}
+            className={`flex flex-col items-center gap-1 rounded-xl p-1 ${
+              myTurn && state.phase === "draw" && top ? "ring-2 ring-gold shadow-glow" : ""
+            }`}
+            aria-label="Prendre la défausse"
+          >
+            {top ? (
+              <PlayingCard rank={rankLabel(top.rank) as never} suit={top.suit} width={62} />
+            ) : (
+              <span className="flex h-[87px] w-[62px] items-center justify-center rounded-lg panel-soft text-xs text-[color:var(--text-soft)]">
+                vide
+              </span>
+            )}
+            <span className="text-[0.7rem] text-[color:var(--text-soft)]">défausse</span>
+          </button>
+        </div>
+
+        <StatusMessage
+          myTurn={myTurn}
+          phase={state.phase}
+          activeName={state.players[state.turn]?.name ?? ""}
+          thinking={thinkingId != null}
+        />
+      </div>
+
+      {/* Ma main */}
+      <div>
+        <div className="mb-1 flex items-center justify-center gap-2 text-sm">
+          <span className="text-[color:var(--text-soft)]">points isolés :</span>
+          <span className={`tnum text-lg font-bold ${myIsolated === 0 ? "text-gold" : ""}`}>{myIsolated}</span>
+          {selectedId && isolatedAfterDiscard != null && (
+            <span className="text-xs text-[color:var(--text-soft)]">
+              (après défausse : <span className="tnum">{isolatedAfterDiscard}</span>)
+            </span>
+          )}
+        </div>
+
+        <HandFan
+          cards={me.hand}
+          meldedIds={meldedIds}
+          selectedId={selectedId}
+          onSelect={(id) => setSelectedId((s) => (s === id ? null : id))}
+          disabled={!myTurn}
+        />
+
+        {/* Barre d'action */}
+        <div className="mt-2 flex gap-2">
+          {state.phase === "discard" && myTurn ? (
+            <>
+              <button
+                onClick={doDiscard}
+                disabled={!selectedId}
+                className="tap flex-1 rounded-2xl panel py-3.5 font-semibold disabled:opacity-40 active:scale-[0.98] transition-transform"
+              >
+                Jeter{selectedId ? "" : " (choisir)"}
+              </button>
+              <button
+                onClick={doPose}
+                disabled={!canPose}
+                className={`tap flex-1 rounded-2xl py-3.5 font-bold transition-transform active:scale-[0.98] ${
+                  canPose
+                    ? isolatedAfterDiscard === 0
+                      ? "bg-gold text-felt-deep shadow-glow"
+                      : "bg-gold text-felt-deep"
+                    : "panel-soft opacity-40"
+                }`}
+              >
+                {isolatedAfterDiscard === 0 ? "RÉMI SEC !" : "POSER"}
+              </button>
+            </>
+          ) : (
+            <div className="flex-1 rounded-2xl panel-soft py-3.5 text-center text-sm text-[color:var(--text-soft)]">
+              {myTurn ? "Touchez la pioche ou la défausse" : `Au tour de ${state.players[state.turn]?.name}`}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Révélation de fin de manche */}
+      {state.phase === "roundEnd" && state.outcome && (
+        <RoundReveal
+          players={state.players}
+          outcome={state.outcome}
+          scores={state.scores}
+          isGameEnd={false}
+          onNext={goNextRound}
+        />
+      )}
+    </main>
+  );
+}
+
+function StatusMessage({
+  myTurn,
+  phase,
+  activeName,
+  thinking,
+}: {
+  myTurn: boolean;
+  phase: GameState["phase"];
+  activeName: string;
+  thinking: boolean;
+}) {
+  let msg: string;
+  if (myTurn && phase === "draw") msg = "À vous — piochez une carte";
+  else if (myTurn && phase === "discard") msg = "Jetez une carte, ou posez si ≤ 10";
+  else if (thinking) msg = `${activeName} réfléchit…`;
+  else msg = `Au tour de ${activeName}`;
+  return <div className="rounded-full panel-soft px-4 py-1.5 text-sm">{msg}</div>;
+}

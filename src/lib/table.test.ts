@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { createGame, commitRound, undoLastRound, totals, rematch, computeStats } from "./game";
+import { createGame, commitRound, undoLastRound, totals, rematch, computeStats } from "./table";
 import { roundHeading, dealerIndexForRound, starterIndexForRound, cardsPerPlayer } from "./rotation";
 
 describe("rotation du donneur", () => {

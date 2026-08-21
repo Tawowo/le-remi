@@ -1,70 +1,74 @@
 "use client";
 
-import type { Game } from "@/lib/types";
-import { totals, computeStats } from "@/lib/table";
-import { Confetti } from "./Confetti";
+import { Confetti } from "@/components/Confetti";
+import type { EnginePlayer } from "@/lib/game/engine";
+import { makeRecord, type RoundLike } from "@/lib/profiles";
 
 const MEDALS = ["🥇", "🥈", "🥉"];
 
-export function VictoryScreen({
-  game,
+/** Écran de victoire du mode jouable : podium, stats, revanche. */
+export function PlayVictory({
+  players,
+  scores,
+  rounds,
   onRematch,
   onHome,
 }: {
-  game: Game;
+  players: EnginePlayer[];
+  scores: number[];
+  rounds: RoundLike[];
   onRematch: () => void;
   onHome: () => void;
 }) {
-  const t = totals(game);
-  const stats = computeStats(game);
-  const podium = game.players
-    .map((p, i) => ({ player: p, index: i, total: t[i] }))
+  const podium = players
+    .map((p, i) => ({ p, total: scores[i] }))
     .sort((a, b) => b.total - a.total);
 
+  const rec = makeRecord(
+    "solo",
+    players.map((p) => ({ name: p.name, isBot: p.isBot })),
+    0,
+    rounds,
+  );
+  const bestRoundPlayer = rec.players.reduce((a, b) => (b.bestRound > a.bestRound ? b : a), rec.players[0]);
+  const remiSecTotal = rec.players.reduce((s, p) => s + p.remiSecs, 0);
+
   return (
-    <main className="mx-auto min-h-app max-w-md px-5 safe-top safe-bottom pt-2">
+    <main className="mx-auto min-h-app max-w-md px-5 safe-top safe-bottom pt-4">
       <Confetti active count={140} />
       <div className="text-center">
         <div className="text-sm uppercase tracking-[0.3em] text-[color:var(--text-soft)]">Partie terminée</div>
         <h1 className="mt-2 text-4xl font-display font-black">
-          <span className="gold-shimmer">{podium[0].player.name} l'emporte !</span>
+          <span className="gold-shimmer">{podium[0].p.name} gagne !</span>
         </h1>
       </div>
 
       <ol className="mt-8 flex flex-col gap-2.5">
         {podium.map((entry, rank) => (
           <li
-            key={entry.player.id}
-            className={`flex items-center gap-3 rounded-2xl p-4 ${
-              rank === 0 ? "bg-gold text-felt-deep shadow-glow" : "panel"
-            }`}
+            key={entry.p.id}
+            className={`flex items-center gap-3 rounded-2xl p-4 ${rank === 0 ? "bg-gold text-felt-deep shadow-glow" : "panel"}`}
             style={{ animation: `pop-gold 0.5s ${rank * 0.1}s both` }}
           >
             <span className="text-2xl">{MEDALS[rank] ?? `${rank + 1}.`}</span>
             <span
               className="flex h-10 w-10 items-center justify-center rounded-full text-base font-bold text-felt-deep"
-              style={{ background: entry.player.color }}
+              style={{ background: entry.p.color }}
             >
-              {entry.player.name.slice(0, 1).toUpperCase()}
+              {entry.p.name.slice(0, 1).toUpperCase()}
             </span>
-            <span className="flex-1 truncate text-lg font-bold">{entry.player.name}</span>
+            <span className="flex-1 truncate text-lg font-bold">
+              {entry.p.name}
+              {entry.p.isBot && <span className="ml-1 text-xs opacity-70">bot</span>}
+            </span>
             <span className="text-2xl font-black tnum">{entry.total}</span>
           </li>
         ))}
       </ol>
 
-      <div className="mt-6 grid grid-cols-3 gap-2.5">
-        <Stat
-          label="Meilleure manche"
-          value={stats.bestRound ? `+${stats.bestRound.value}` : "—"}
-          sub={stats.bestRound ? game.players[stats.bestRound.playerIndex].name : ""}
-        />
-        <Stat label="Rémi secs" value={String(stats.remiSecCount)} sub="posés à 0" />
-        <Stat
-          label="Roi du contre"
-          value={stats.contreKing ? String(stats.contreKing.count) : "0"}
-          sub={stats.contreKing ? game.players[stats.contreKing.playerIndex].name : "aucun"}
-        />
+      <div className="mt-6 grid grid-cols-2 gap-2.5">
+        <Stat label="Meilleure manche" value={`+${bestRoundPlayer?.bestRound ?? 0}`} sub={bestRoundPlayer?.name ?? ""} />
+        <Stat label="Rémi secs" value={String(remiSecTotal)} sub="dans la partie" />
       </div>
 
       <div className="mt-8 flex flex-col gap-3">
@@ -72,7 +76,7 @@ export function VictoryScreen({
           onClick={onRematch}
           className="tap w-full rounded-2xl bg-gold py-4 text-lg font-bold text-felt-deep shadow-glow active:scale-[0.98] transition-transform"
         >
-          Revanche (ordre décalé)
+          Revanche
         </button>
         <button onClick={onHome} className="tap w-full rounded-2xl panel py-3.5 font-semibold active:scale-[0.98] transition-transform">
           Retour à l'accueil

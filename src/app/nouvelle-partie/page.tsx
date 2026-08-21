@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
-import { AVATAR_COLORS, createGame } from "@/lib/game";
+import { AVATAR_COLORS, createGame } from "@/lib/table";
 import { defaultTarget } from "@/lib/scoring";
 import { upsertGame, setCurrentGame } from "@/lib/storage";
 
@@ -57,7 +57,7 @@ export default function NewGamePage() {
   };
 
   return (
-    <main className="mx-auto min-h-screen max-w-md px-5 pt-6 safe-bottom">
+    <main className="mx-auto min-h-app max-w-md px-5 safe-top safe-bottom pt-2">
       <header className="mb-5 flex items-center gap-3">
         <Link href="/" className="tap flex items-center rounded-full panel px-3 text-lg" aria-label="Retour">
           ←

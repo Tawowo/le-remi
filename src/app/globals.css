@@ -101,8 +101,28 @@ h3,
   animation: shimmer 2.5s linear infinite;
 }
 
+/* Hauteur d'écran mobile fiable : dvh évite que la barre d'adresse ne rogne
+   le contenu (fallback vh pour les vieux navigateurs). */
+.min-h-app {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+.h-app {
+  height: 100vh;
+  height: 100dvh;
+}
+
+/* Zones sûres iOS/Android — haut ET bas. Aucun élément interactif ne doit
+   se coller au bord : on ajoute au moins 12 px en haut. */
+.safe-top {
+  padding-top: max(0.75rem, env(safe-area-inset-top));
+}
 .safe-bottom {
   padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+.safe-x {
+  padding-left: max(0px, env(safe-area-inset-left));
+  padding-right: max(0px, env(safe-area-inset-right));
 }
 
 /* Respect de reduced-motion : on coupe toute animation non essentielle */

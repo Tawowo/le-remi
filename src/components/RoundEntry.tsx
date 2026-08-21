@@ -194,8 +194,8 @@ function Shell({
   onBack?: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-40 flex flex-col bg-[color:var(--bg)]/95 backdrop-blur">
-      <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 pt-5 safe-bottom">
+    <div className="fixed inset-0 z-40 flex h-app flex-col bg-[color:var(--bg)]/95 backdrop-blur">
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 safe-top safe-bottom pt-2">
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             {onBack && (

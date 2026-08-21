@@ -2,7 +2,7 @@
 
 import { useLayoutEffect, useRef } from "react";
 import type { Game } from "@/lib/types";
-import { totals, lastRoundDeltas } from "@/lib/game";
+import { totals, lastRoundDeltas } from "@/lib/table";
 import { Odometer } from "./Odometer";
 
 /**

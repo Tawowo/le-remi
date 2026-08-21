@@ -4,7 +4,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { Game } from "@/lib/types";
 import { getCurrentGame, upsertGame, setCurrentGame } from "@/lib/storage";
-import { commitRound, undoLastRound, nextRoundNumber, rematch } from "@/lib/game";
+import { commitRound, undoLastRound, nextRoundNumber, rematch } from "@/lib/table";
+import { makeRecord, recordGame } from "@/lib/profiles";
 import { roundHeading, cardsPerPlayer } from "@/lib/rotation";
 import { RankingBoard } from "@/components/RankingBoard";
 import { RoundEntry } from "@/components/RoundEntry";
@@ -34,7 +35,7 @@ export default function GamePage() {
 
   if (ready && !game) {
     return (
-      <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-5 text-center">
+      <main className="mx-auto flex min-h-app max-w-md flex-col items-center justify-center px-5 text-center safe-top safe-bottom">
         <p className="mb-4 text-lg">Aucune partie en cours.</p>
         <button
           onClick={() => router.push("/nouvelle-partie")}
@@ -68,7 +69,7 @@ export default function GamePage() {
   const heading = roundHeading(game.players, roundNumber);
 
   return (
-    <main className="mx-auto min-h-screen max-w-md px-5 pt-5 safe-bottom">
+    <main className="mx-auto min-h-app max-w-md px-5 safe-top safe-bottom pt-2">
       <header className="mb-4 flex items-center justify-between">
         <button onClick={() => router.push("/")} className="tap rounded-full panel px-3 text-lg" aria-label="Accueil">
           ⌂
@@ -141,8 +142,19 @@ export default function GamePage() {
           roundNumber={roundNumber}
           onCancel={() => setEntryOpen(false)}
           onCommit={(poserIndex, points) => {
-            persist(commitRound(game, poserIndex, points));
+            const next = commitRound(game, poserIndex, points);
+            persist(next);
             setEntryOpen(false);
+            if (next.finishedAt) {
+              recordGame(
+                makeRecord(
+                  "table",
+                  next.players.map((p) => ({ name: p.name, isBot: false })),
+                  next.target,
+                  next.rounds.map((r) => ({ poserIndex: r.poserIndex, result: r.result })),
+                ),
+              );
+            }
           }}
         />
       )}
